@@ -1,0 +1,20 @@
+[
+    {
+        "id": 1,
+        "nome": "CTO 1",
+        "localizacao": "Feira Coberra",
+        "quantidade_portas": "16",
+        "data_criacao": "20/07/2026 21:38",
+        "portas": [
+            {
+                "numero": "1",
+                "status": "🟢 Ocupada",
+                "cliente": "TEste",
+                "plano": "100 Mb",
+                "observacao": "TEste"
+            }
+        ],
+        "latitude": "-16.620884080908354",
+        "longitude": "-51.095633659298464"
+    }
+]
