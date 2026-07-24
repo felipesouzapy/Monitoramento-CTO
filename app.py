@@ -5,35 +5,31 @@ from fastapi.templating import Jinja2Templates
 from datetime import datetime
 import json
 import os
+from db import (
+    init_db,
+    is_postgres_connected,
+    test_connection,
+    db_get_all_ctos,
+    db_add_cto,
+    db_update_cto,
+    db_delete_cto,
+    db_add_porta,
+    db_update_porta,
+    db_delete_porta
+)
 
 app = FastAPI(title="Monitoramento CTO")
+
+# Inicializa banco de dados (Cria tabelas se PostgreSQL estiver disponível)
+@app.on_event("startup")
+def startup_db_client():
+    init_db()
 
 # Arquivos estáticos (CSS, JS, imagens)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # Pasta dos templates HTML
 templates = Jinja2Templates(directory="templates")
-
-# Arquivo onde serão salvos os dados
-ARQUIVO = "dados.json"
-
-
-def carregar_ctos():
-    if not os.path.exists(ARQUIVO):
-        with open(ARQUIVO, "w", encoding="utf-8") as f:
-            json.dump([], f)
-
-    with open(ARQUIVO, "r", encoding="utf-8") as f:
-        return json.load(f)
-
-
-def salvar_ctos():
-    with open(ARQUIVO, "w", encoding="utf-8") as f:
-        json.dump(ctos, f, ensure_ascii=False, indent=4)
-
-
-# Carrega as CTOs salvas
-ctos = carregar_ctos()
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -48,6 +44,22 @@ async def home(request: Request):
     )
 
 
+@app.get("/db-status")
+async def db_status():
+    connected, message = test_connection()
+    return {
+        "postgres_connected": connected,
+        "message": message,
+        "storage_mode": "PostgreSQL" if connected else "JSON Local (Fallback)"
+    }
+
+
+@app.get("/listar-ctos")
+async def listar_ctos():
+    ctos = db_get_all_ctos()
+    return {"ctos": ctos}
+
+
 @app.post("/nova-cto")
 async def nova_cto(request: Request):
     data = await request.json()
@@ -56,20 +68,16 @@ async def nova_cto(request: Request):
     portas = data.get("portas", [])
     latitude = data.get("latitude", "")
     longitude = data.get("longitude", "")
+    sinal = data.get("sinal", "")
 
-    nova_cto_obj = {
-        "id": len(ctos) + 1,
-        "nome": f"CTO {len(ctos) + 1}",
-        "localizacao": localizacao,
-        "quantidade_portas": quantidade_portas,
-        "data_criacao": datetime.now().strftime("%d/%m/%Y %H:%M"),
-        "portas": portas,
-        "latitude": latitude,
-        "longitude": longitude
-    }
-
-    ctos.append(nova_cto_obj)
-    salvar_ctos()
+    nova_cto_obj = db_add_cto(
+        localizacao=localizacao,
+        quantidade_portas=quantidade_portas,
+        portas=portas,
+        latitude=latitude,
+        longitude=longitude,
+        sinal=sinal
+    )
 
     return {
         "message": "Nova CTO criada com sucesso!",
@@ -83,26 +91,22 @@ async def adicionar_porta(request: Request):
     data = await request.json()
     cto_id = data.get("cto_id")
 
-    # Encontrar a CTO pelo ID
-    cto = next((c for c in ctos if str(c["id"]) == str(cto_id)), None)
-
-    if not cto:
-        return JSONResponse(
-            status_code=404,
-            content={"status": "error", "message": "CTO não encontrada"}
-        )
-
     nova_porta = {
         "numero": data.get("numero"),
         "status": data.get("status"),
         "cliente": data.get("cliente", "-"),
         "plano": data.get("plano", "-"),
+        "sinal": data.get("sinal", ""),
         "observacao": data.get("observacao", "-")
     }
-    
-    cto["portas"].append(nova_porta)
 
-    salvar_ctos()
+    success = db_add_porta(cto_id, nova_porta)
+
+    if not success:
+        return JSONResponse(
+            status_code=400,
+            content={"status": "error", "message": "Falha ao adicionar porta ou CTO não encontrada"}
+        )
 
     return {
         "status": "success",
@@ -116,29 +120,30 @@ async def editar_cto(request: Request):
     data = await request.json()
     cto_id = data.get("cto_id")
 
-    cto = next((c for c in ctos if str(c["id"]) == str(cto_id)), None)
+    localizacao = data.get("localizacao")
+    quantidade_portas = data.get("quantidade_portas")
+    latitude = data.get("latitude")
+    longitude = data.get("longitude")
+    sinal = data.get("sinal")
 
-    if not cto:
+    success = db_update_cto(
+        cto_id=cto_id,
+        localizacao=localizacao,
+        quantidade_portas=quantidade_portas,
+        latitude=latitude,
+        longitude=longitude,
+        sinal=sinal
+    )
+
+    if not success:
         return JSONResponse(
             status_code=404,
-            content={"status": "error", "message": "CTO não encontrada"}
+            content={"status": "error", "message": "CTO não encontrada ou erro na atualização"}
         )
-
-    if "localizacao" in data:
-        cto["localizacao"] = data.get("localizacao")
-    if "quantidade_portas" in data:
-        cto["quantidade_portas"] = data.get("quantidade_portas")
-    if "latitude" in data:
-        cto["latitude"] = data.get("latitude")
-    if "longitude" in data:
-        cto["longitude"] = data.get("longitude")
-
-    salvar_ctos()
 
     return {
         "status": "success",
-        "message": "CTO atualizada com sucesso!",
-        "cto": cto
+        "message": "CTO atualizada com sucesso!"
     }
 
 
@@ -147,17 +152,13 @@ async def excluir_cto(request: Request):
     data = await request.json()
     cto_id = data.get("cto_id")
 
-    cto = next((c for c in ctos if str(c["id"]) == str(cto_id)), None)
+    success = db_delete_cto(cto_id)
 
-    if not cto:
+    if not success:
         return JSONResponse(
             status_code=404,
             content={"status": "error", "message": "CTO não encontrada"}
         )
-
-    ctos.remove(cto)
-
-    salvar_ctos()
 
     return {
         "status": "success",
@@ -170,42 +171,28 @@ async def editar_porta(request: Request):
     data = await request.json()
     cto_id = data.get("cto_id")
     numero_original = data.get("numero_original")
-    numero = data.get("numero")
 
-    cto = next((c for c in ctos if str(c["id"]) == str(cto_id)), None)
+    data_porta = {
+        "numero": data.get("numero"),
+        "status": data.get("status"),
+        "cliente": data.get("cliente"),
+        "plano": data.get("plano"),
+        "sinal": data.get("sinal"),
+        "observacao": data.get("observacao")
+    }
 
-    if not cto:
+    success, msg = db_update_porta(cto_id, numero_original, data_porta)
+
+    if not success:
         return JSONResponse(
-            status_code=404,
-            content={"status": "error", "message": "CTO não encontrada"}
+            status_code=400,
+            content={"status": "error", "message": msg}
         )
-
-    porta = next((p for p in cto["portas"] if str(p["numero"]) == str(numero_original)), None)
-
-    if not porta:
-        return JSONResponse(
-            status_code=404,
-            content={"status": "error", "message": "Porta não encontrada"}
-        )
-
-    if str(numero) != str(numero_original):
-        porta_ocupada = next((p for p in cto["portas"] if str(p["numero"]) == str(numero)), None)
-        if porta_ocupada:
-            return JSONResponse(
-                status_code=409,
-                content={"status": "error", "message": f"A porta {numero} já está em uso"}
-            )
-        porta["numero"] = numero
-
-    porta["status"] = data.get("status", porta["status"])
-    porta["cliente"] = data.get("cliente", porta["cliente"])
-    porta["plano"] = data.get("plano", porta["plano"])
-    porta["observacao"] = data.get("observacao", porta["observacao"])
 
     return {
         "status": "success",
-        "message": "Porta atualizada com sucesso!",
-        "porta": porta
+        "message": msg,
+        "porta": data_porta
     }
 
 
@@ -215,31 +202,15 @@ async def excluir_porta(request: Request):
     cto_id = data.get("cto_id")
     numero = data.get("numero")
 
-    cto = next((c for c in ctos if str(c["id"]) == str(cto_id)), None)
+    success = db_delete_porta(cto_id, numero)
 
-    if not cto:
+    if not success:
         return JSONResponse(
             status_code=404,
-            content={"status": "error", "message": "CTO não encontrada"}
+            content={"status": "error", "message": "Porta não encontrada ou CTO não encontrada"}
         )
 
-    porta = next((p for p in cto["portas"] if str(p["numero"]) == str(numero)), None)
-
-    if not porta:
-        return JSONResponse(
-            status_code=404,
-            content={"status": "error", "message": "Porta não encontrada"}
-        )
-
-    cto["portas"].remove(porta)
-
-    salvar_ctos()
     return {
         "status": "success",
         "message": "Porta excluída com sucesso!"
     }
-
-
-@app.get("/listar-ctos")
-async def listar_ctos():
-    return {"ctos": ctos}

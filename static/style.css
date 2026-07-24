@@ -340,3 +340,256 @@ tbody tr:last-child td {
     border: 1px solid #334155;
     overflow: hidden;
 }
+
+/* --- BARRA SUPERIOR & SELETOR DE MODO (CELULAR / COMPUTADOR) --- */
+.top-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 15px;
+    background: rgba(15, 23, 42, 0.7);
+    padding: 12px 20px;
+    border-radius: 10px;
+    border: 1px solid #334155;
+    margin-bottom: 25px;
+}
+
+.db-badge {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.9em;
+    font-weight: 600;
+    padding: 6px 14px;
+    border-radius: 20px;
+    background: rgba(30, 41, 59, 0.9);
+    border: 1px solid #334155;
+}
+
+.db-status-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.db-status-dot.online {
+    background-color: #22c55e;
+    box-shadow: 0 0 8px #22c55e;
+}
+
+.db-status-dot.offline {
+    background-color: #f59e0b;
+    box-shadow: 0 0 8px #f59e0b;
+}
+
+.device-switcher {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.device-btn {
+    background: #334155;
+    color: #cbd5e1;
+    border: 1px solid #475569;
+    padding: 6px 14px;
+    font-size: 0.85em;
+    border-radius: 6px;
+    cursor: pointer;
+    box-shadow: none;
+    transition: all 0.2s ease;
+}
+
+.device-btn:hover {
+    background: #475569;
+    color: #ffffff;
+    transform: none;
+    box-shadow: none;
+}
+
+.device-btn.active {
+    background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%);
+    color: #ffffff;
+    border-color: #60a5fa;
+    font-weight: bold;
+}
+
+/* --- BADGES DE SINAL DA CTO E PORTA --- */
+.sinal-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 0.85em;
+    font-weight: 600;
+    margin-left: 10px;
+}
+
+.sinal-bom {
+    background-color: rgba(34, 197, 94, 0.2);
+    color: #4ade80;
+    border: 1px solid rgba(34, 197, 94, 0.4);
+}
+
+.sinal-atencao {
+    background-color: rgba(245, 158, 11, 0.2);
+    color: #fbbf24;
+    border: 1px solid rgba(245, 158, 11, 0.4);
+}
+
+.sinal-ruim {
+    background-color: rgba(239, 68, 68, 0.2);
+    color: #f87171;
+    border: 1px solid rgba(239, 68, 68, 0.4);
+}
+
+.sinal-neutro {
+    background-color: rgba(148, 163, 184, 0.2);
+    color: #cbd5e1;
+    border: 1px solid rgba(148, 163, 184, 0.4);
+}
+
+.cto-info-line {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    align-items: center;
+    margin-top: 8px;
+    font-size: 0.95em;
+    color: #cbd5e1;
+}
+
+/* --- MODOS DE VISUALIZAÇÃO (COMPUTADOR vs CELULAR) --- */
+
+/* MODO CELULAR FORÇADO VIA CLASS OU TELA PEQUENA */
+body.view-mode-mobile,
+@media (max-width: 768px) {
+    body:not(.view-mode-desktop) {
+        padding: 10px;
+    }
+
+    body:not(.view-mode-desktop) h1 {
+        font-size: 1.8em;
+    }
+
+    body:not(.view-mode-desktop) .top-bar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    body:not(.view-mode-desktop) .device-switcher {
+        justify-content: center;
+    }
+
+    body:not(.view-mode-desktop) .nav-tabs {
+        flex-wrap: wrap;
+    }
+
+    body:not(.view-mode-desktop) .nav-tab {
+        flex: 1 1 auto;
+        text-align: center;
+        padding: 10px 12px;
+        font-size: 0.9em;
+    }
+
+    body:not(.view-mode-desktop) #btnNovaCTO {
+        width: 100%;
+        padding: 14px;
+        font-size: 1em;
+    }
+
+    body:not(.view-mode-desktop) .modal-content {
+        width: 95%;
+        padding: 20px;
+        margin: 10% auto;
+    }
+
+    /* Transformação da tabela em CARDS para visualização em Celular */
+    body:not(.view-mode-desktop) table, 
+    body:not(.view-mode-desktop) thead, 
+    body:not(.view-mode-desktop) tbody, 
+    body:not(.view-mode-desktop) th, 
+    body:not(.view-mode-desktop) td, 
+    body:not(.view-mode-desktop) tr { 
+        display: block; 
+    }
+
+    body:not(.view-mode-desktop) table thead {
+        display: none; /* Oculta cabeçalho no celular */
+    }
+
+    body:not(.view-mode-desktop) tbody tr {
+        background: #0f172a;
+        border: 1px solid #334155;
+        border-radius: 8px;
+        margin-bottom: 12px;
+        padding: 12px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    }
+
+    body:not(.view-mode-desktop) td {
+        border: none;
+        position: relative;
+        padding: 6px 0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 0.95em;
+    }
+
+    body:not(.view-mode-desktop) td::before {
+        content: attr(data-label);
+        font-weight: 600;
+        color: #93c5fd;
+        margin-right: 15px;
+    }
+
+    body:not(.view-mode-desktop) td:last-child {
+        justify-content: flex-end;
+        padding-top: 10px;
+        border-top: 1px solid #1e293b;
+        margin-top: 6px;
+    }
+
+    body:not(.view-mode-desktop) .cto-section {
+        padding: 15px;
+    }
+
+    body:not(.view-mode-desktop) .mapa-container {
+        height: 350px;
+    }
+}
+
+/* MODO COMPUTADOR FORÇADO */
+body.view-mode-desktop {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+body.view-mode-desktop table {
+    display: table !important;
+}
+
+body.view-mode-desktop thead {
+    display: table-header-group !important;
+}
+
+body.view-mode-desktop tbody {
+    display: table-row-group !important;
+}
+
+body.view-mode-desktop tr {
+    display: table-row !important;
+}
+
+body.view-mode-desktop th, 
+body.view-mode-desktop td {
+    display: table-cell !important;
+}
+
+body.view-mode-desktop td::before {
+    display: none !important;
+}
