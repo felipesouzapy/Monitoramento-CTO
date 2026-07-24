@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,6 +10,7 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </head>
+
 <body>
 
     <div class="top-bar">
@@ -18,9 +20,12 @@
         </div>
         <div class="device-switcher">
             <span style="font-size:0.85em; color:#94a3b8; margin-right:5px;">Visualização:</span>
-            <button type="button" class="device-btn active" id="btnModeAuto" onclick="definirModoExibicao('auto')">⚡ Auto</button>
-            <button type="button" class="device-btn" id="btnModeDesktop" onclick="definirModoExibicao('desktop')">💻 Computador</button>
-            <button type="button" class="device-btn" id="btnModeMobile" onclick="definirModoExibicao('mobile')">📱 Celular</button>
+            <button type="button" class="device-btn active" id="btnModeAuto" onclick="definirModoExibicao('auto')">⚡
+                Auto</button>
+            <button type="button" class="device-btn" id="btnModeDesktop" onclick="definirModoExibicao('desktop')">💻
+                Computador</button>
+            <button type="button" class="device-btn" id="btnModeMobile" onclick="definirModoExibicao('mobile')">📱
+                Celular</button>
         </div>
     </div>
 
@@ -31,10 +36,12 @@
 
     <!-- Modal para criar ou editar CTO -->
     <div id="modalCTO" class="modal">
-        <div class="modal-content">
-            <span class="close">&times;</span>
-            <h2 id="modalCTOTitulo">Criar Nova CTO</h2>
-            
+        <div class="modal-content" id="contentModalCTO">
+            <div class="modal-header-handle" id="handleModalCTO">
+                <h2 id="modalCTOTitulo">Criar Nova CTO <span class="drag-hint">🖐️ Arraste para mover</span></h2>
+                <span class="close">&times;</span>
+            </div>
+
             <div>
                 <h3>Dados da CTO</h3>
                 <div class="form-group">
@@ -54,7 +61,8 @@
                 </div>
                 <div class="form-group">
                     <label>Localização no mapa (clique para marcar):</label>
-                    <div id="miniMapaCTO" style="height: 200px; border-radius: 8px; border: 1px solid #334155; margin-top: 5px;"></div>
+                    <div id="miniMapaCTO"
+                        style="height: 200px; border-radius: 8px; border: 1px solid #334155; margin-top: 5px;"></div>
                     <input type="hidden" id="inputLatitude">
                     <input type="hidden" id="inputLongitude">
                 </div>
@@ -109,10 +117,12 @@
 
     <!-- Modal para adicionar/editar porta individual -->
     <div id="modalPorta" class="modal">
-        <div class="modal-content">
-            <span class="close" id="closePorta">&times;</span>
-            <h2 id="modalPortaTitulo">Adicionar Porta</h2>
-            
+        <div class="modal-content" id="contentModalPorta">
+            <div class="modal-header-handle" id="handleModalPorta">
+                <h2 id="modalPortaTitulo">Adicionar Porta <span class="drag-hint">🖐️ Arraste para mover</span></h2>
+                <span class="close" id="closePorta">&times;</span>
+            </div>
+
             <p id="ctoInfoModal" style="color: #94a3b8; font-size: 0.95em; margin-bottom: 15px;"></p>
 
             <div>
@@ -180,7 +190,8 @@
     <!-- Conteúdo da Aba Clientes -->
     <div id="conteudoClientes" style="display: none;">
         <h2>Lista Geral de Clientes</h2>
-        <input type="text" id="filtroClientes" class="filtro-clientes" placeholder="🔍 Buscar cliente, CTO ou plano..." oninput="filtrarClientes()">
+        <input type="text" id="filtroClientes" class="filtro-clientes" placeholder="🔍 Buscar cliente, CTO ou plano..."
+            oninput="filtrarClientes()">
         <div id="tabelaClientesContainer">
             <p style="color: #94a3b8;">Carregando clientes...</p>
         </div>
@@ -287,6 +298,11 @@
         // Elementos modais
         const modalCTO = document.getElementById("modalCTO");
         const modalPorta = document.getElementById("modalPorta");
+        const contentModalCTO = document.getElementById("contentModalCTO");
+        const contentModalPorta = document.getElementById("contentModalPorta");
+        const handleModalCTO = document.getElementById("handleModalCTO");
+        const handleModalPorta = document.getElementById("handleModalPorta");
+
         const closeBtnCTO = document.querySelector(".close");
         const closeBtnPorta = document.getElementById("closePorta");
         const btnNovaCTO = document.getElementById("btnNovaCTO");
@@ -298,8 +314,85 @@
         const inputQuantidadePortas = document.getElementById("inputQuantidadePortas");
         const inputPorta = document.getElementById("inputPorta");
 
+        // --- TORNAR JANELAS DE MODAIS MÓVEIS / ARRASTÁVEIS ---
+        function tornarJanelaMovel(modalContent, handle) {
+            let posX = 0, posY = 0, mouseX = 0, mouseY = 0;
+
+            handle.onmousedown = iniciarArrastoMouse;
+            handle.ontouchstart = iniciarArrastoTouch;
+
+            function iniciarArrastoMouse(e) {
+                if (e.target.classList.contains('close') || e.target.closest('.close')) return;
+                e.preventDefault();
+                mouseX = e.clientX;
+                mouseY = e.clientY;
+                document.onmouseup = pararArrastoMouse;
+                document.onmousemove = arrastarMouse;
+            }
+
+            function arrastarMouse(e) {
+                e.preventDefault();
+                posX = mouseX - e.clientX;
+                posY = mouseY - e.clientY;
+                mouseX = e.clientX;
+                mouseY = e.clientY;
+
+                modalContent.style.position = 'absolute';
+                modalContent.style.margin = '0';
+                modalContent.style.top = Math.max(0, modalContent.offsetTop - posY) + 'px';
+                modalContent.style.left = Math.max(0, modalContent.offsetLeft - posX) + 'px';
+            }
+
+            function pararArrastoMouse() {
+                document.onmouseup = null;
+                document.onmousemove = null;
+            }
+
+            function iniciarArrastoTouch(e) {
+                if (e.target.classList.contains('close') || e.target.closest('.close')) return;
+                if (e.touches.length === 1) {
+                    const touch = e.touches[0];
+                    mouseX = touch.clientX;
+                    mouseY = touch.clientY;
+                    document.ontouchend = pararArrastoTouch;
+                    document.ontouchmove = arrastarTouch;
+                }
+            }
+
+            function arrastarTouch(e) {
+                if (e.touches.length === 1) {
+                    const touch = e.touches[0];
+                    posX = mouseX - touch.clientX;
+                    posY = mouseY - touch.clientY;
+                    mouseX = touch.clientX;
+                    mouseY = touch.clientY;
+
+                    modalContent.style.position = 'absolute';
+                    modalContent.style.margin = '0';
+                    modalContent.style.top = Math.max(0, modalContent.offsetTop - posY) + 'px';
+                    modalContent.style.left = Math.max(0, modalContent.offsetLeft - posX) + 'px';
+                }
+            }
+
+            function pararArrastoTouch() {
+                document.ontouchend = null;
+                document.ontouchmove = null;
+            }
+        }
+
+        function resetarPosicaoModal(modalContent) {
+            modalContent.style.position = '';
+            modalContent.style.margin = '';
+            modalContent.style.top = '';
+            modalContent.style.left = '';
+            modalContent.scrollTop = 0;
+        }
+
+        tornarJanelaMovel(contentModalCTO, handleModalCTO);
+        tornarJanelaMovel(contentModalPorta, handleModalPorta);
+
         // Atualizar select de portas conforme a quantidade selecionada
-        inputQuantidadePortas.onchange = function() {
+        inputQuantidadePortas.onchange = function () {
             const quantidade = this.value;
             inputPorta.innerHTML = '<option value="">Selecione uma porta</option>';
             for (let i = 1; i <= quantidade; i++) {
@@ -308,7 +401,7 @@
         }
 
         // Adicionar porta na lista do modal de criação de CTO
-        btnAdicionarPortaLista.onclick = function() {
+        btnAdicionarPortaLista.onclick = function () {
             const numPorta = inputPorta.value;
             const status = document.getElementById("inputStatus").value;
             const cliente = document.getElementById("inputCliente").value.trim() || "-";
@@ -367,7 +460,8 @@
         }
 
         // Abrir modal de criar CTO
-        btnNovaCTO.onclick = function() {
+        btnNovaCTO.onclick = function () {
+            resetarPosicaoModal(contentModalCTO);
             ctoEditandoId = null;
             document.getElementById("modalCTOTitulo").textContent = "Criar Nova CTO";
             btnCriarCTO.textContent = "✓ Criar CTO";
@@ -392,7 +486,7 @@
         btnFecharPorta.onclick = () => { portaEditandoNumero = null; document.getElementById("inputPortaModal").disabled = false; modalPorta.style.display = "none"; }
 
         // Criar ou editar CTO
-        btnCriarCTO.onclick = async function() {
+        btnCriarCTO.onclick = async function () {
             const localizacao = document.getElementById("inputLocalizacao").value.trim();
             const quantidadePortas = document.getElementById("inputQuantidadePortas").value;
             const sinal = document.getElementById("inputSinalCTO").value.trim();
@@ -407,7 +501,7 @@
             try {
                 const isEdit = ctoEditandoId !== null;
                 const url = isEdit ? '/editar-cto' : '/nova-cto';
-                
+
                 const bodyObj = isEdit ? {
                     cto_id: ctoEditandoId,
                     localizacao: localizacao,
@@ -445,6 +539,7 @@
 
         // Abrir modal de editar CTO
         function abrirModalEditarCTO(ctoId, ctoLocalizacao, ctoQuantidade, ctoLatitude, ctoLongitude, ctoSinal) {
+            resetarPosicaoModal(contentModalCTO);
             ctoEditandoId = ctoId;
             document.getElementById("modalCTOTitulo").textContent = "Editar CTO";
             btnCriarCTO.textContent = "✓ Salvar Alterações";
@@ -476,7 +571,7 @@
                     miniMapa = L.map('miniMapaCTO').setView([latPadrao, lngPadrao], zoomPadrao);
                     adicionarCamadasBase(miniMapa);
 
-                    miniMapa.on('click', function(e) {
+                    miniMapa.on('click', function (e) {
                         definirMarcadorMiniMapa(e.latlng.lat, e.latlng.lng);
                     });
                 } else {
@@ -524,6 +619,7 @@
 
         // Abrir modal de adicionar porta
         function abrirModalAdicionarPorta(ctoId, ctoNome, ctoLocalizacao, ctoQuantidade) {
+            resetarPosicaoModal(contentModalPorta);
             ctoAtualId = ctoId;
             portaEditandoNumero = null;
             document.getElementById("modalPortaTitulo").textContent = "Adicionar Porta";
@@ -555,6 +651,7 @@
 
         // Abrir modal de editar porta
         function abrirModalEditarPorta(ctoId, ctoNome, ctoLocalizacao, ctoQuantidade, numero, status, cliente, plano, observacao, sinal) {
+            resetarPosicaoModal(contentModalPorta);
             ctoAtualId = ctoId;
             portaEditandoNumero = numero;
             document.getElementById("modalPortaTitulo").textContent = `Editar Porta ${numero}`;
@@ -576,7 +673,7 @@
         }
 
         // Salvar Porta (Adicionar ou Editar)
-        btnAdicionarPorta.onclick = async function() {
+        btnAdicionarPorta.onclick = async function () {
             const numero = document.getElementById("inputPortaModal").value;
             const status = document.getElementById("inputStatusModal").value;
             const cliente = document.getElementById("inputClienteModal").value.trim() || "-";
@@ -725,20 +822,18 @@
                                         <td data-label="Porta"><strong>Porta ${porta.numero}</strong></td>
                                         <td data-label="Status">
                                             <span style="
-                                                padding: 3px 8px; 
-                                                border-radius: 4px; 
-                                                font-size: 0.85em; 
+                                                padding: 3px 8px;
+                                                border-radius: 4px;
+                                                font-size: 0.85em;
                                                 font-weight: 600;
-                                                background-color: ${
-                                                    porta.status === 'Ocupada' ? 'rgba(239,68,68,0.2)' :
-                                                    porta.status === 'Livre' ? 'rgba(34,197,94,0.2)' :
-                                                    porta.status === 'Reservada' ? 'rgba(245,158,11,0.2)' : 'rgba(148,163,184,0.2)'
-                                                };
-                                                color: ${
-                                                    porta.status === 'Ocupada' ? '#f87171' :
-                                                    porta.status === 'Livre' ? '#4ade80' :
-                                                    porta.status === 'Reservada' ? '#fbbf24' : '#cbd5e1'
-                                                };
+                                                background-color: ${porta.status === 'Ocupada' ? 'rgba(239,68,68,0.2)' :
+                        porta.status === 'Livre' ? 'rgba(34,197,94,0.2)' :
+                            porta.status === 'Reservada' ? 'rgba(245,158,11,0.2)' : 'rgba(148,163,184,0.2)'
+                    };
+                                                color: ${porta.status === 'Ocupada' ? '#f87171' :
+                        porta.status === 'Livre' ? '#4ade80' :
+                            porta.status === 'Reservada' ? '#fbbf24' : '#cbd5e1'
+                    };
                                             ">${porta.status}</span>
                                         </td>
                                         <td data-label="Cliente">${porta.cliente}</td>
@@ -889,7 +984,7 @@
                 if (!isNaN(lat) && !isNaN(lng)) {
                     bounds.push([lat, lng]);
                     const marker = L.marker([lat, lng]).addTo(mapaGeralObj);
-                    
+
                     const sinalTxt = cto.sinal ? `<br>📶 Sinal: <b>${cto.sinal}</b>` : '';
                     marker.bindPopup(`
                         <div style="color: #0f172a;">
@@ -912,4 +1007,5 @@
         carregarCTOs();
     </script>
 </body>
+
 </html>

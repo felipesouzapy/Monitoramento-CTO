@@ -82,19 +82,58 @@ button:active {
     top: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0, 0, 0, 0.7);
+    background-color: rgba(0, 0, 0, 0.75);
     backdrop-filter: blur(4px);
+    overflow-y: auto;
+    padding: 10px;
 }
 
 .modal-content {
     background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-    margin: 5% auto;
-    padding: 35px;
-    border: 1px solid #334155;
-    width: 90%;
-    max-width: 600px;
+    margin: 20px auto;
+    padding: 25px;
+    border: 1px solid #3b82f6;
+    width: 95%;
+    max-width: 650px;
+    max-height: 90vh;
+    overflow-y: auto;
     border-radius: 12px;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7);
+    position: relative;
+}
+
+.modal-header-handle {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: move;
+    background: rgba(30, 41, 59, 0.9);
+    padding: 12px 18px;
+    border-radius: 10px 10px 0 0;
+    margin: -25px -25px 20px -25px;
+    border-bottom: 1px solid #334155;
+    user-select: none;
+    touch-action: none;
+}
+
+.modal-header-handle h2 {
+    margin: 0;
+    border: none;
+    padding: 0;
+    font-size: 1.25em;
+    color: #60a5fa;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.drag-hint {
+    font-size: 0.75em;
+    color: #94a3b8;
+    background: #334155;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-weight: normal;
 }
 
 .close {
@@ -502,19 +541,20 @@ body.view-mode-mobile,
     }
 
     body:not(.view-mode-desktop) .modal-content {
-        width: 95%;
-        padding: 20px;
-        margin: 10% auto;
+        width: 98%;
+        padding: 15px;
+        margin: 10px auto;
+        max-height: 94vh;
     }
 
     /* Transformação da tabela em CARDS para visualização em Celular */
-    body:not(.view-mode-desktop) table, 
-    body:not(.view-mode-desktop) thead, 
-    body:not(.view-mode-desktop) tbody, 
-    body:not(.view-mode-desktop) th, 
-    body:not(.view-mode-desktop) td, 
-    body:not(.view-mode-desktop) tr { 
-        display: block; 
+    body:not(.view-mode-desktop) table,
+    body:not(.view-mode-desktop) thead,
+    body:not(.view-mode-desktop) tbody,
+    body:not(.view-mode-desktop) th,
+    body:not(.view-mode-desktop) td,
+    body:not(.view-mode-desktop) tr {
+        display: block;
     }
 
     body:not(.view-mode-desktop) table thead {
@@ -585,7 +625,7 @@ body.view-mode-desktop tr {
     display: table-row !important;
 }
 
-body.view-mode-desktop th, 
+body.view-mode-desktop th,
 body.view-mode-desktop td {
     display: table-cell !important;
 }
