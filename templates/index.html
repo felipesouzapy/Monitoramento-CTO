@@ -34,6 +34,17 @@
 
     <button id="btnNovaCTO">➕ Nova CTO</button>
 
+    <section class="dashboard-cards" aria-label="Resumo do monitoramento">
+        <article class="dashboard-card">
+            <span>Total de clientes</span>
+            <strong id="totalClientes">0</strong>
+        </article>
+        <article class="dashboard-card">
+            <span>Total de CTOs</span>
+            <strong id="totalCTOs">0</strong>
+        </article>
+    </section>
+
     <!-- Modal para criar ou editar CTO -->
     <div id="modalCTO" class="modal">
         <div class="modal-content" id="contentModalCTO">
@@ -84,8 +95,11 @@
                     </select>
                 </div>
                 <div class="form-group">
-                    <label>Cliente:</label>
-                    <input type="text" id="inputCliente" placeholder="Nome do cliente">
+                    <label for="inputCliente">Buscar cliente cadastrado:</label>
+                    <input type="search" id="inputCliente" placeholder="Digite as primeiras letras do nome"
+                        autocomplete="off">
+                    <div id="sugestoesClientesCriacao" class="suggestions-list" role="listbox"></div>
+                    <small>Cadastre clientes na aba Clientes antes de vinculá-los.</small>
                 </div>
                 <div class="form-group">
                     <label>Plano:</label>
@@ -142,8 +156,11 @@
                     </select>
                 </div>
                 <div class="form-group">
-                    <label>Cliente:</label>
-                    <input type="text" id="inputClienteModal" placeholder="Nome do cliente">
+                    <label for="inputClienteModal">Buscar cliente cadastrado:</label>
+                    <input type="search" id="inputClienteModal" placeholder="Digite as primeiras letras do nome"
+                        autocomplete="off">
+                    <div id="sugestoesClientesModal" class="suggestions-list" role="listbox"></div>
+                    <small>Somente clientes sem vínculo com outra CTO podem ser selecionados. Cadastre novos clientes na aba Clientes.</small>
                 </div>
                 <div class="form-group">
                     <label>Plano:</label>
@@ -162,6 +179,62 @@
             <div class="modal-buttons">
                 <button id="btnAdicionarPorta">✓ Salvar Porta</button>
                 <button id="btnFecharPorta" class="btn-secondary">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modalCliente" class="modal">
+        <div class="modal-content">
+            <div class="modal-header-handle">
+                <h2 id="modalClienteTitulo">Cadastrar cliente</h2>
+                <button type="button" class="close close-modal" aria-label="Fechar">&times;</button>
+            </div>
+            <input type="hidden" id="clienteEditandoId">
+            <div class="form-group">
+                <label for="inputNomeCliente">Nome:</label>
+                <input type="text" id="inputNomeCliente" maxlength="150" required>
+            </div>
+            <div class="form-group">
+                <label for="inputPlanoCliente">Plano:</label>
+                <input type="text" id="inputPlanoCliente" placeholder="Ex.: 200 Mega">
+            </div>
+            <div class="form-group">
+                <label for="inputPPPoE">PPPoE:</label>
+                <input type="text" id="inputPPPoE" autocomplete="off">
+            </div>
+            <div class="form-group">
+                <label for="inputPPUE">PPUE:</label>
+                <div class="copy-field">
+                    <input type="text" id="inputPPUE" autocomplete="off">
+                    <button type="button" id="btnCopiarPPUE" class="btn-secondary copy-button">Copiar</button>
+                </div>
+            </div>
+            <div class="modal-buttons">
+                <button type="button" id="btnSalvarCliente">Salvar cliente</button>
+                <button type="button" class="btn-secondary close-modal">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modalTransferencia" class="modal">
+        <div class="modal-content">
+            <div class="modal-header-handle">
+                <h2>Transferir cliente</h2>
+                <button type="button" class="close close-modal" aria-label="Fechar">&times;</button>
+            </div>
+            <input type="hidden" id="clienteTransferindoId">
+            <input type="hidden" id="ctoOrigemTransferenciaId">
+            <div class="form-group">
+                <label for="ctoDestinoTransferencia">CTO de destino:</label>
+                <select id="ctoDestinoTransferencia"></select>
+            </div>
+            <div class="form-group">
+                <label for="portaDestinoTransferencia">Porta disponível:</label>
+                <select id="portaDestinoTransferencia"></select>
+            </div>
+            <div class="modal-buttons">
+                <button type="button" id="btnConfirmarTransferencia">Confirmar transferência</button>
+                <button type="button" class="btn-secondary close-modal">Cancelar</button>
             </div>
         </div>
     </div>
@@ -189,7 +262,10 @@
 
     <!-- Conteúdo da Aba Clientes -->
     <div id="conteudoClientes" style="display: none;">
-        <h2>Lista Geral de Clientes</h2>
+        <div class="clients-heading">
+            <h2>Lista Geral de Clientes</h2>
+            <button type="button" id="btnNovoCliente">➕ Cadastrar cliente</button>
+        </div>
         <input type="text" id="filtroClientes" class="filtro-clientes" placeholder="🔍 Buscar cliente, CTO ou plano..."
             oninput="filtrarClientes()">
         <div id="tabelaClientesContainer">
@@ -199,6 +275,7 @@
 
     <script>
         let ctosGlobais = [];
+        let clientesGlobais = [];
         let mapaGeralObj = null;
         let mapaGeralMarkers = [];
         let ctoAtualId = null;
@@ -207,6 +284,23 @@
         let portasConfiguradas = [];
         let miniMapa = null;
         let miniMapaMarker = null;
+        let clienteSelecionadoId = null;
+        let clienteEmEdicaoId = null;
+        let clienteInicialSelecionadoId = null;
+
+        function escaparHtml(value) {
+            return String(value ?? '').replace(/[&<>"']/g, character => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#39;'
+            })[character]);
+        }
+
+        function argumentoInline(value) {
+            return `decodeURIComponent('${encodeURIComponent(String(value ?? '')).replace(/'/g, '%27')}')`;
+        }
 
         // --- MODO DE EXIBIÇÃO (CELULAR / COMPUTADOR) ---
         function definirModoExibicao(modo) {
@@ -313,6 +407,12 @@
         const btnAdicionarPortaLista = document.getElementById("btnAdicionarPortaLista");
         const inputQuantidadePortas = document.getElementById("inputQuantidadePortas");
         const inputPorta = document.getElementById("inputPorta");
+        const inputClienteCriacao = document.getElementById("inputCliente");
+        const sugestoesClientesCriacao = document.getElementById("sugestoesClientesCriacao");
+        const inputClienteModal = document.getElementById("inputClienteModal");
+        const sugestoesClientesModal = document.getElementById("sugestoesClientesModal");
+        const modalCliente = document.getElementById("modalCliente");
+        const modalTransferencia = document.getElementById("modalTransferencia");
 
         // --- TORNAR JANELAS DE MODAIS MÓVEIS / ARRASTÁVEIS ---
         function tornarJanelaMovel(modalContent, handle) {
@@ -404,7 +504,12 @@
         btnAdicionarPortaLista.onclick = function () {
             const numPorta = inputPorta.value;
             const status = document.getElementById("inputStatus").value;
-            const cliente = document.getElementById("inputCliente").value.trim() || "-";
+            const clienteDigitado = inputClienteCriacao.value.trim();
+            if (clienteDigitado && !clienteInicialSelecionadoId) {
+                alert("Selecione um cliente cadastrado na lista de resultados.");
+                return;
+            }
+            const cliente = clienteInicialSelecionadoId ? clienteDigitado : "-";
             const plano = document.getElementById("inputPlano").value.trim() || "-";
             const sinal = document.getElementById("inputSinalPortaInicial").value.trim() || "";
             const observacao = document.getElementById("inputObservacao").value.trim() || "-";
@@ -424,6 +529,7 @@
                 numero: numPorta,
                 status: status,
                 cliente: cliente,
+                cliente_id: clienteInicialSelecionadoId,
                 plano: plano,
                 sinal: sinal,
                 observacao: observacao
@@ -433,7 +539,9 @@
 
             // Limpar campos
             inputPorta.value = "";
-            document.getElementById("inputCliente").value = "";
+            clienteInicialSelecionadoId = null;
+            inputClienteCriacao.value = "";
+            sugestoesClientesCriacao.innerHTML = "";
             document.getElementById("inputPlano").value = "";
             document.getElementById("inputSinalPortaInicial").value = "";
             document.getElementById("inputObservacao").value = "";
@@ -469,6 +577,12 @@
             document.getElementById("inputQuantidadePortas").value = "8";
             document.getElementById("inputSinalCTO").value = "";
             portasConfiguradas = [];
+            clienteInicialSelecionadoId = null;
+            inputClienteCriacao.value = "";
+            sugestoesClientesCriacao.innerHTML = "";
+            document.getElementById("inputPlano").value = "";
+            document.getElementById("inputSinalPortaInicial").value = "";
+            document.getElementById("inputObservacao").value = "";
             atualizarListaPortasCriacao();
 
             inputPorta.innerHTML = '<option value="">Selecione uma porta</option>';
@@ -484,6 +598,85 @@
         closeBtnPorta.onclick = () => { portaEditandoNumero = null; document.getElementById("inputPortaModal").disabled = false; modalPorta.style.display = "none"; }
         btnCancelar.onclick = () => { ctoEditandoId = null; modalCTO.style.display = "none"; }
         btnFecharPorta.onclick = () => { portaEditandoNumero = null; document.getElementById("inputPortaModal").disabled = false; modalPorta.style.display = "none"; }
+        document.querySelectorAll(".close-modal").forEach(button => {
+            button.addEventListener("click", () => {
+                modalCliente.style.display = "none";
+                modalTransferencia.style.display = "none";
+            });
+        });
+        document.getElementById("btnNovoCliente").onclick = () => abrirModalCliente();
+        document.getElementById("btnSalvarCliente").onclick = salvarCliente;
+        document.getElementById("btnCopiarPPUE").onclick = () => copiarPPUE(document.getElementById("inputPPUE").value);
+        document.getElementById("btnConfirmarTransferencia").onclick = confirmarTransferencia;
+        document.getElementById("ctoDestinoTransferencia").onchange = atualizarPortasDestino;
+        inputClienteModal.addEventListener("input", atualizarSugestoesClientes);
+        inputClienteCriacao.addEventListener("input", atualizarSugestoesClientesCriacao);
+
+        function abrirModalCliente(clienteId = null) {
+            const cliente = clienteId === null
+                ? null
+                : clientesGlobais.find(item => String(item.id) === String(clienteId));
+            document.getElementById("clienteEditandoId").value = cliente ? cliente.id : "";
+            document.getElementById("modalClienteTitulo").textContent = cliente ? "Editar cliente" : "Cadastrar cliente";
+            document.getElementById("inputNomeCliente").value = cliente?.nome || "";
+            document.getElementById("inputPlanoCliente").value = cliente?.plano || "";
+            document.getElementById("inputPPPoE").value = cliente?.pppoe || "";
+            document.getElementById("inputPPUE").value = cliente?.ppue || "";
+            modalCliente.style.display = "block";
+        }
+
+        async function salvarCliente() {
+            const clienteId = document.getElementById("clienteEditandoId").value;
+            const body = {
+                nome: document.getElementById("inputNomeCliente").value.trim(),
+                plano: document.getElementById("inputPlanoCliente").value.trim() || "-",
+                pppoe: document.getElementById("inputPPPoE").value.trim(),
+                ppue: document.getElementById("inputPPUE").value.trim()
+            };
+            if (!body.nome) {
+                alert("Informe o nome do cliente.");
+                return;
+            }
+            try {
+                const response = await fetch(clienteId ? "/editar-cliente" : "/novo-cliente", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(clienteId ? { ...body, cliente_id: clienteId } : body)
+                });
+                const data = await response.json();
+                if (!response.ok) {
+                    alert(data.message || "Não foi possível salvar o cliente.");
+                    return;
+                }
+                modalCliente.style.display = "none";
+                await carregarCTOs();
+            } catch (error) {
+                alert("Erro ao conectar com o servidor.");
+            }
+        }
+
+        async function copiarPPUE(valor) {
+            if (!valor) {
+                alert("Não há PPUE para copiar.");
+                return;
+            }
+            try {
+                await navigator.clipboard.writeText(valor);
+                alert("PPUE copiado para a área de transferência.");
+            } catch (error) {
+                const temporario = document.createElement("textarea");
+                temporario.value = valor;
+                document.body.appendChild(temporario);
+                temporario.select();
+                const copiado = document.execCommand("copy");
+                temporario.remove();
+                if (copiado) {
+                    alert("PPUE copiado para a área de transferência.");
+                } else {
+                    alert("Não foi possível copiar o PPUE.");
+                }
+            }
+        }
 
         // Criar ou editar CTO
         btnCriarCTO.onclick = async function () {
@@ -641,7 +834,10 @@
             }
 
             document.getElementById("inputStatusModal").value = "Ocupada";
+            clienteSelecionadoId = null;
+            clienteEmEdicaoId = null;
             document.getElementById("inputClienteModal").value = "";
+            sugestoesClientesModal.innerHTML = "";
             document.getElementById("inputPlanoModal").value = "";
             document.getElementById("inputSinalPortaModal").value = "";
             document.getElementById("inputObservacaoModal").value = "";
@@ -649,8 +845,72 @@
             modalPorta.style.display = "block";
         }
 
+        function atualizarSugestoesClientes() {
+            const termo = inputClienteModal.value.trim().toLocaleLowerCase("pt-BR");
+            clienteSelecionadoId = null;
+            if (!termo) {
+                sugestoesClientesModal.innerHTML = "";
+                return;
+            }
+
+            const clientesDisponiveis = clientesGlobais.filter(cliente =>
+                (!cliente.cto_id || String(cliente.id) === String(clienteEmEdicaoId))
+                && cliente.nome.toLocaleLowerCase("pt-BR").startsWith(termo)
+            );
+            sugestoesClientesModal.innerHTML = clientesDisponiveis.length
+                ? clientesDisponiveis.map(cliente => `
+                    <button type="button" role="option"
+                        onclick="selecionarClienteParaPorta('${cliente.id}')">
+                        ${escaparHtml(cliente.nome)}${cliente.plano ? ` — ${escaparHtml(cliente.plano)}` : ""}
+                    </button>
+                `).join("")
+                : '<span class="suggestion-empty">Nenhum cliente disponível começa com essas letras.</span>';
+        }
+
+        function atualizarSugestoesClientesCriacao() {
+            const termo = inputClienteCriacao.value.trim().toLocaleLowerCase("pt-BR");
+            clienteInicialSelecionadoId = null;
+            if (!termo) {
+                sugestoesClientesCriacao.innerHTML = "";
+                return;
+            }
+            const jaConfigurados = new Set(
+                portasConfiguradas.map(porta => String(porta.cliente_id)).filter(Boolean)
+            );
+            const disponiveis = clientesGlobais.filter(cliente =>
+                !cliente.cto_id
+                && !jaConfigurados.has(String(cliente.id))
+                && cliente.nome.toLocaleLowerCase("pt-BR").startsWith(termo)
+            );
+            sugestoesClientesCriacao.innerHTML = disponiveis.length
+                ? disponiveis.map(cliente => `
+                    <button type="button" role="option" onclick="selecionarClienteInicial('${cliente.id}')">
+                        ${escaparHtml(cliente.nome)}${cliente.plano ? ` — ${escaparHtml(cliente.plano)}` : ""}
+                    </button>
+                `).join("")
+                : '<span class="suggestion-empty">Nenhum cliente disponível começa com essas letras.</span>';
+        }
+
+        function selecionarClienteInicial(clienteId) {
+            const cliente = clientesGlobais.find(item => String(item.id) === String(clienteId));
+            if (!cliente) return;
+            clienteInicialSelecionadoId = cliente.id;
+            inputClienteCriacao.value = cliente.nome;
+            document.getElementById("inputPlano").value = cliente.plano || "-";
+            sugestoesClientesCriacao.innerHTML = "";
+        }
+
+        function selecionarClienteParaPorta(clienteId) {
+            const cliente = clientesGlobais.find(item => String(item.id) === String(clienteId));
+            if (!cliente) return;
+            clienteSelecionadoId = cliente.id;
+            inputClienteModal.value = cliente.nome;
+            document.getElementById("inputPlanoModal").value = cliente.plano || "-";
+            sugestoesClientesModal.innerHTML = "";
+        }
+
         // Abrir modal de editar porta
-        function abrirModalEditarPorta(ctoId, ctoNome, ctoLocalizacao, ctoQuantidade, numero, status, cliente, plano, observacao, sinal) {
+        function abrirModalEditarPorta(ctoId, ctoNome, ctoLocalizacao, ctoQuantidade, numero, status, cliente, plano, observacao, sinal, clienteId) {
             resetarPosicaoModal(contentModalPorta);
             ctoAtualId = ctoId;
             portaEditandoNumero = numero;
@@ -664,7 +924,10 @@
             selectPorta.disabled = true;
 
             document.getElementById("inputStatusModal").value = status || "Livre";
+            clienteSelecionadoId = clienteId || null;
+            clienteEmEdicaoId = clienteId || null;
             document.getElementById("inputClienteModal").value = cliente !== "-" ? cliente : "";
+            sugestoesClientesModal.innerHTML = "";
             document.getElementById("inputPlanoModal").value = plano !== "-" ? plano : "";
             document.getElementById("inputSinalPortaModal").value = sinal || "";
             document.getElementById("inputObservacaoModal").value = observacao !== "-" ? observacao : "";
@@ -676,7 +939,12 @@
         btnAdicionarPorta.onclick = async function () {
             const numero = document.getElementById("inputPortaModal").value;
             const status = document.getElementById("inputStatusModal").value;
-            const cliente = document.getElementById("inputClienteModal").value.trim() || "-";
+            const clienteDigitado = document.getElementById("inputClienteModal").value.trim();
+            if (clienteDigitado && !clienteSelecionadoId) {
+                alert("Selecione um cliente cadastrado na lista de resultados.");
+                return;
+            }
+            const cliente = clienteSelecionadoId ? clienteDigitado : "-";
             const plano = document.getElementById("inputPlanoModal").value.trim() || "-";
             const sinal = document.getElementById("inputSinalPortaModal").value.trim() || "";
             const observacao = document.getElementById("inputObservacaoModal").value.trim() || "-";
@@ -696,6 +964,7 @@
                     numero: numero,
                     status: status,
                     cliente: cliente,
+                    cliente_id: clienteSelecionadoId,
                     plano: plano,
                     sinal: sinal,
                     observacao: observacao
@@ -704,6 +973,7 @@
                     numero: numero,
                     status: status,
                     cliente: cliente,
+                    cliente_id: clienteSelecionadoId,
                     plano: plano,
                     sinal: sinal,
                     observacao: observacao
@@ -751,12 +1021,23 @@
         // Carregar CTOs ao iniciar
         async function carregarCTOs() {
             try {
-                const response = await fetch('/listar-ctos');
-                const data = await response.json();
-                ctosGlobais = data.ctos || [];
-
+                const [respostaCtos, respostaClientes] = await Promise.all([
+                    fetch('/listar-ctos'),
+                    fetch('/listar-clientes')
+                ]);
+                if (!respostaCtos.ok || !respostaClientes.ok) {
+                    throw new Error("Falha ao consultar CTOs ou clientes");
+                }
+                const [dadosCtos, dadosClientes] = await Promise.all([
+                    respostaCtos.json(),
+                    respostaClientes.json()
+                ]);
+                ctosGlobais = dadosCtos.ctos || [];
+                clientesGlobais = dadosClientes.clientes || [];
+                document.getElementById("totalClientes").textContent = clientesGlobais.length;
+                document.getElementById("totalCTOs").textContent = ctosGlobais.length;
                 renderizarCTOs(ctosGlobais);
-                renderizarClientes(ctosGlobais);
+                renderizarClientes(clientesGlobais);
 
                 if (mapaGeralObj) {
                     atualizarMapaGeral(ctosGlobais);
@@ -778,6 +1059,7 @@
                 const totalPortas = parseInt(cto.quantidade_portas) || 8;
                 const portasAtivasCount = cto.portas.length;
                 const portasOcupadasCount = cto.portas.filter(p => p.status === 'Ocupada').length;
+                const clientesCto = clientesGlobais.filter(cliente => String(cliente.cto_id) === String(cto.id));
 
                 return `
                     <div class="cto-section" id="cto-card-${cto.id}">
@@ -787,9 +1069,11 @@
                                 ${formatarSinalBadge(cto.sinal, 'CTO')}
                             </div>
                             <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                                <button onclick="abrirModalAdicionarPorta('${cto.id}', '${cto.nome}', '${cto.localizacao}', '${cto.quantidade_portas}')" style="background: #22c55e; padding: 6px 12px; font-size: 0.85em;">➕ Add Porta</button>
-                                <button onclick="abrirModalEditarCTO('${cto.id}', '${cto.localizacao}', '${cto.quantidade_portas}', '${cto.latitude}', '${cto.longitude}', '${cto.sinal || ''}')" style="background: #f59e0b; padding: 6px 12px; font-size: 0.85em;">✏️ Editar CTO</button>
-                                <button onclick="excluirCTO('${cto.id}')" style="background: #ef4444; padding: 6px 12px; font-size: 0.85em;">🗑️ Excluir</button>
+                                <button onclick="abrirModalAdicionarPorta(${argumentoInline(cto.id)}, ${argumentoInline(cto.nome)}, ${argumentoInline(cto.localizacao)}, ${argumentoInline(cto.quantidade_portas)})" style="background: #22c55e; padding: 6px 12px; font-size: 0.85em;">➕ Add Porta</button>
+                                <button onclick="abrirModalEditarCTO(${argumentoInline(cto.id)}, ${argumentoInline(cto.localizacao)}, ${argumentoInline(cto.quantidade_portas)}, ${argumentoInline(cto.latitude)}, ${argumentoInline(cto.longitude)}, ${argumentoInline(cto.sinal || '')})" style="background: #f59e0b; padding: 6px 12px; font-size: 0.85em;">✏️ Editar CTO</button>
+                                <button onclick="excluirCTO(${argumentoInline(cto.id)})" style="background: #ef4444; padding: 6px 12px; font-size: 0.85em;">🗑️ Excluir</button>
+                                <button type="button" class="btn-secondary" id="toggle-clientes-${cto.id}"
+                                    onclick="alternarClientesCTO(${argumentoInline(cto.id)})" style="padding: 6px 12px; font-size: 0.85em;">Ver clientes (${clientesCto.length})</button>
                             </div>
                         </div>
 
@@ -800,12 +1084,25 @@
                             ${cto.latitude && cto.longitude ? `<span style="color: #60a5fa;">📍 [${cto.latitude}, ${cto.longitude}]</span>` : ''}
                         </div>
 
+                        <div id="clientes-cto-${cto.id}" class="cto-client-list" hidden>
+                            ${clientesCto.length ? clientesCto.map(cliente => `
+                                <div class="cto-client-item">
+                                    <div>
+                                        <strong>${escaparHtml(cliente.nome)}</strong>
+                                        <span>Porta ${escaparHtml(cliente.porta_numero)}</span>
+                                        ${cliente.ppue ? `<span>PPUE: ${escaparHtml(cliente.ppue)}</span>` : ""}
+                                    </div>
+                                    <button type="button" onclick="abrirTransferencia(${argumentoInline(cliente.id)}, ${argumentoInline(cto.id)})">Transferir</button>
+                                    <button type="button" class="btn-secondary" onclick="desvincularCliente(${argumentoInline(cliente.id)})">Remover da CTO</button>
+                                </div>
+                            `).join("") : '<p>Nenhum cliente vinculado a esta CTO.</p>'}
+                        </div>
+
                         <table>
                             <thead>
                                 <tr>
                                     <th>Porta</th>
                                     <th>Status</th>
-                                    <th>Cliente</th>
                                     <th>Plano</th>
                                     <th>Sinal (dBm)</th>
                                     <th>Observação</th>
@@ -815,7 +1112,7 @@
                             <tbody>
                                 ${cto.portas.length === 0 ? `
                                     <tr>
-                                        <td colspan="7" style="text-align: center; color: #64748b;">Nenhuma porta adicionada a esta CTO.</td>
+                                        <td colspan="6" style="text-align: center; color: #64748b;">Nenhuma porta adicionada a esta CTO.</td>
                                     </tr>
                                 ` : cto.portas.map(porta => `
                                     <tr>
@@ -836,13 +1133,12 @@
                     };
                                             ">${porta.status}</span>
                                         </td>
-                                        <td data-label="Cliente">${porta.cliente}</td>
                                         <td data-label="Plano">${porta.plano}</td>
                                         <td data-label="Sinal">${formatarSinalBadge(porta.sinal, 'Porta')}</td>
                                         <td data-label="Observação">${porta.observacao}</td>
                                         <td data-label="Ações">
-                                            <button onclick="abrirModalEditarPorta('${cto.id}', '${cto.nome}', '${cto.localizacao}', '${cto.quantidade_portas}', '${porta.numero}', '${porta.status}', '${porta.cliente}', '${porta.plano}', '${porta.observacao}', '${porta.sinal || ''}')" style="background: #f59e0b; padding: 4px 10px; font-size: 0.85em;" title="Editar Porta">✏️</button>
-                                            <button onclick="excluirPorta('${cto.id}', '${porta.numero}')" style="background: #ef4444; padding: 4px 10px; font-size: 0.85em; margin-left: 4px;" title="Excluir Porta">🗑️</button>
+                                            <button onclick="abrirModalEditarPorta(${argumentoInline(cto.id)}, ${argumentoInline(cto.nome)}, ${argumentoInline(cto.localizacao)}, ${argumentoInline(cto.quantidade_portas)}, ${argumentoInline(porta.numero)}, ${argumentoInline(porta.status)}, ${argumentoInline(porta.cliente || '-')}, ${argumentoInline(porta.plano)}, ${argumentoInline(porta.observacao)}, ${argumentoInline(porta.sinal || '')}, ${argumentoInline(porta.cliente_id || '')})" style="background: #f59e0b; padding: 4px 10px; font-size: 0.85em;" title="Editar Porta">✏️</button>
+                                            <button onclick="excluirPorta(${argumentoInline(cto.id)}, ${argumentoInline(porta.numero)})" style="background: #ef4444; padding: 4px 10px; font-size: 0.85em; margin-left: 4px;" title="Excluir Porta">🗑️</button>
                                         </td>
                                     </tr>
                                 `).join('')}
@@ -854,30 +1150,10 @@
         }
 
         // Renderizar Lista de Clientes
-        function renderizarClientes(ctos) {
+        function renderizarClientes(clientes) {
             const container = document.getElementById('tabelaClientesContainer');
-            const listaClientes = [];
-
-            ctos.forEach(cto => {
-                cto.portas.forEach(porta => {
-                    if (porta.cliente && porta.cliente !== '-') {
-                        listaClientes.push({
-                            cliente: porta.cliente,
-                            plano: porta.plano,
-                            sinal: porta.sinal,
-                            ctoNome: cto.nome,
-                            ctoId: cto.id,
-                            localizacao: cto.localizacao,
-                            portaNumero: porta.numero,
-                            status: porta.status,
-                            observacao: porta.observacao
-                        });
-                    }
-                });
-            });
-
-            if (listaClientes.length === 0) {
-                container.innerHTML = '<p style="color: #94a3b8;">Nenhum cliente cadastrado até o momento.</p>';
+            if (!clientes.length) {
+                container.innerHTML = '<p class="empty-state">Nenhum cliente cadastrado até o momento.</p>';
                 return;
             }
 
@@ -887,28 +1163,64 @@
                         <tr>
                             <th>Cliente</th>
                             <th>Plano</th>
-                            <th>Sinal</th>
-                            <th>CTO</th>
-                            <th>Porta</th>
-                            <th>Localização</th>
-                            <th>Observação</th>
+                            <th>PPPoE</th>
+                            <th>PPUE</th>
+                            <th>Vínculo</th>
+                            <th>Ações</th>
                         </tr>
                     </thead>
                     <tbody id="corpoTabelaClientes">
-                        ${listaClientes.map(item => `
-                            <tr>
-                                <td data-label="Cliente"><strong>${item.cliente}</strong></td>
-                                <td data-label="Plano">${item.plano}</td>
-                                <td data-label="Sinal">${formatarSinalBadge(item.sinal, 'Porta')}</td>
-                                <td data-label="CTO"><a href="javascript:void(0)" onclick="focarCTO(${item.ctoId})" style="color: #60a5fa; text-decoration: underline;">${item.ctoNome}</a></td>
-                                <td data-label="Porta">Porta ${item.portaNumero}</td>
-                                <td data-label="Localização">${item.localizacao}</td>
-                                <td data-label="Observação">${item.observacao}</td>
+                        ${clientes.map(item => `
+                            <tr data-search="${escaparHtml(`${item.nome} ${item.plano} ${item.pppoe} ${item.ppue} ${item.cto_nome || ""}`)}">
+                                <td data-label="Cliente"><strong>${escaparHtml(item.nome)}</strong></td>
+                                <td data-label="Plano">${escaparHtml(item.plano || "-")}</td>
+                                <td data-label="PPPoE">${escaparHtml(item.pppoe || "-")}</td>
+                                <td data-label="PPUE">
+                                    ${escaparHtml(item.ppue || "-")}
+                                    ${item.ppue ? `<button type="button" class="copy-ppue" data-ppue="${escaparHtml(item.ppue)}">Copiar</button>` : ""}
+                                </td>
+                                <td data-label="Vínculo">${item.cto_id
+                                    ? `<a href="javascript:void(0)" onclick="focarCTO(${argumentoInline(item.cto_id)})">${escaparHtml(item.cto_nome)} — Porta ${escaparHtml(item.porta_numero)}</a>`
+                                    : "Sem CTO vinculada"}</td>
+                                <td data-label="Ações" class="client-actions">
+                                    <button type="button" onclick="abrirModalCliente(${argumentoInline(item.id)})">Editar</button>
+                                    ${item.cto_id ? `<button type="button" class="btn-secondary" onclick="desvincularCliente(${argumentoInline(item.id)})">Remover da CTO</button>` : ""}
+                                </td>
                             </tr>
                         `).join('')}
                     </tbody>
                 </table>
             `;
+            container.querySelectorAll(".copy-ppue").forEach(button => {
+                button.addEventListener("click", () => copiarPPUE(button.dataset.ppue));
+            });
+            filtrarClientes();
+        }
+
+        function alternarClientesCTO(ctoId) {
+            const lista = document.getElementById(`clientes-cto-${ctoId}`);
+            const botao = document.getElementById(`toggle-clientes-${ctoId}`);
+            lista.hidden = !lista.hidden;
+            botao.textContent = `${lista.hidden ? "Ver" : "Ocultar"} clientes (${clientesGlobais.filter(c => String(c.cto_id) === String(ctoId)).length})`;
+        }
+
+        async function desvincularCliente(clienteId) {
+            if (!confirm("Remover este cliente da CTO? O cadastro e os dados do cliente serão mantidos.")) return;
+            try {
+                const response = await fetch("/desvincular-cliente", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ cliente_id: clienteId })
+                });
+                const data = await response.json();
+                if (!response.ok) {
+                    alert(data.message || "Não foi possível remover o vínculo.");
+                    return;
+                }
+                await carregarCTOs();
+            } catch (error) {
+                alert("Erro ao conectar com o servidor.");
+            }
         }
 
         function filtrarClientes() {
@@ -916,9 +1228,79 @@
             const linhas = document.querySelectorAll('#corpoTabelaClientes tr');
 
             linhas.forEach(linha => {
-                const texto = linha.textContent.toLowerCase();
+                const texto = linha.dataset.search.toLowerCase();
                 linha.style.display = texto.includes(termo) ? '' : 'none';
             });
+        }
+
+        function abrirTransferencia(clienteId, ctoOrigemId) {
+            const destinos = ctosGlobais.filter(cto => String(cto.id) !== String(ctoOrigemId));
+            document.getElementById("clienteTransferindoId").value = clienteId;
+            document.getElementById("ctoOrigemTransferenciaId").value = ctoOrigemId;
+            const selectDestino = document.getElementById("ctoDestinoTransferencia");
+            selectDestino.innerHTML = destinos.length
+                ? destinos.map(cto => `<option value="${cto.id}">${escaparHtml(cto.nome)} — ${escaparHtml(cto.localizacao)}</option>`).join("")
+                : '<option value="">Nenhuma outra CTO cadastrada</option>';
+            atualizarPortasDestino();
+            document.getElementById("btnConfirmarTransferencia").disabled = destinos.length === 0;
+            modalTransferencia.style.display = "block";
+        }
+
+        function atualizarPortasDestino() {
+            const ctoId = document.getElementById("ctoDestinoTransferencia").value;
+            const cto = ctosGlobais.find(item => String(item.id) === String(ctoId));
+            const selectPorta = document.getElementById("portaDestinoTransferencia");
+            if (!cto) {
+                selectPorta.innerHTML = '<option value="">Nenhuma porta disponível</option>';
+                return;
+            }
+
+            const cadastradas = new Map(cto.portas.map(porta => [String(porta.numero), porta]));
+            const capacidade = parseInt(cto.quantidade_portas, 10) || 0;
+            const livres = [];
+            for (let numero = 1; numero <= capacidade; numero++) {
+                const porta = cadastradas.get(String(numero));
+                if (!porta || (
+                    porta.status === "Livre"
+                    && !porta.cliente_id
+                    && (!porta.cliente || porta.cliente === "-")
+                )) {
+                    livres.push(numero);
+                }
+            }
+            selectPorta.innerHTML = livres.length
+                ? livres.map(numero => `<option value="${numero}">Porta ${numero}</option>`).join("")
+                : '<option value="">Nenhuma porta disponível</option>';
+            document.getElementById("btnConfirmarTransferencia").disabled = livres.length === 0;
+        }
+
+        async function confirmarTransferencia() {
+            const body = {
+                cliente_id: document.getElementById("clienteTransferindoId").value,
+                cto_origem_id: document.getElementById("ctoOrigemTransferenciaId").value,
+                cto_destino_id: document.getElementById("ctoDestinoTransferencia").value,
+                numero_destino: document.getElementById("portaDestinoTransferencia").value
+            };
+            if (!body.numero_destino) {
+                alert("Selecione uma porta disponível.");
+                return;
+            }
+            try {
+                const response = await fetch("/transferir-cliente", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(body)
+                });
+                const data = await response.json();
+                if (!response.ok) {
+                    alert(data.message || "Não foi possível transferir o cliente.");
+                    return;
+                }
+                modalTransferencia.style.display = "none";
+                await carregarCTOs();
+            } catch (error) {
+                alert("Erro ao conectar com o servidor.");
+            }
         }
 
         function focarCTO(ctoId) {

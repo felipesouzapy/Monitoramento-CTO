@@ -74,6 +74,35 @@ button:active {
     padding: 15px 35px;
 }
 
+.dashboard-cards {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(180px, 1fr));
+    gap: 16px;
+    margin: 0 0 28px;
+    max-width: 720px;
+}
+
+.dashboard-card {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 20px 24px;
+    border: 1px solid #334155;
+    border-radius: 10px;
+    background: rgba(15, 23, 42, 0.85);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.24);
+}
+
+.dashboard-card span {
+    color: #cbd5e1;
+    font-size: 0.95rem;
+}
+
+.dashboard-card strong {
+    color: #60a5fa;
+    font-size: 2rem;
+}
+
 .modal {
     display: none;
     position: fixed;
@@ -501,17 +530,232 @@ tbody tr:last-child td {
     color: #cbd5e1;
 }
 
-/* --- MODOS DE VISUALIZAÇÃO (COMPUTADOR vs CELULAR) --- */
+/* Layout responsivo */
+body {
+    max-width: 1500px;
+    margin: 0 auto;
+    overflow-x: hidden;
+}
 
-/* MODO CELULAR FORÇADO VIA CLASS OU TELA PEQUENA */
-body.view-mode-mobile,
-@media (max-width: 768px) {
+table {
+    table-layout: auto;
+}
+
+th,
+td {
+    overflow-wrap: anywhere;
+}
+
+.cto-client-list {
+    margin: 14px 0;
+    padding: 14px;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    background: rgba(15, 23, 42, 0.65);
+}
+
+.cto-client-item {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 10px 0;
+    border-bottom: 1px solid #334155;
+}
+
+.cto-client-item:last-child {
+    border-bottom: 0;
+}
+
+.cto-client-item > div {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+    flex: 1 1 240px;
+}
+
+.cto-client-item button,
+.client-actions button,
+.copy-button,
+.copy-ppue {
+    padding: 7px 12px;
+    font-size: 0.85rem;
+}
+
+.suggestions-list {
+    display: grid;
+    gap: 5px;
+    margin-top: 5px;
+}
+
+.suggestions-list button {
+    text-align: left;
+    padding: 9px 12px;
+    border: 1px solid #334155;
+    background: #1e293b;
+    box-shadow: none;
+}
+
+.suggestions-list button:hover {
+    background: #1e40af;
+    transform: none;
+}
+
+.suggestion-empty,
+.empty-state,
+.form-group small {
+    color: #94a3b8;
+}
+
+.form-group small {
+    display: block;
+    margin-top: 7px;
+}
+
+.clients-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.clients-heading h2 {
+    flex: 1 1 300px;
+}
+
+.copy-field {
+    display: flex;
+    gap: 8px;
+}
+
+.copy-field input {
+    min-width: 0;
+}
+
+.copy-button {
+    flex: 0 0 auto;
+}
+
+.client-actions {
+    min-width: 155px;
+}
+
+.modal-content {
+    width: min(95%, 650px);
+}
+
+.modal-header-handle:not(#handleModalCTO):not(#handleModalPorta) {
+    cursor: default;
+}
+
+.close-modal {
+    flex: 0 0 auto;
+    padding: 4px 12px;
+}
+
+body.view-mode-mobile {
+    padding: 10px;
+}
+
+body.view-mode-mobile h1 {
+    font-size: 1.8em;
+}
+
+body.view-mode-mobile .top-bar {
+    flex-direction: column;
+    align-items: stretch;
+}
+
+body.view-mode-mobile .device-switcher {
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+body.view-mode-mobile .nav-tabs {
+    flex-wrap: wrap;
+}
+
+body.view-mode-mobile .nav-tab {
+    flex: 1 1 120px;
+}
+
+body.view-mode-mobile #btnNovaCTO {
+    width: 100%;
+}
+
+body.view-mode-mobile table,
+body.view-mode-mobile thead,
+body.view-mode-mobile tbody,
+body.view-mode-mobile th,
+body.view-mode-mobile td,
+body.view-mode-mobile tr {
+    display: block;
+}
+
+body.view-mode-mobile table thead {
+    display: none;
+}
+
+body.view-mode-mobile tbody tr {
+    margin-bottom: 12px;
+    padding: 12px;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    background: #0f172a;
+}
+
+body.view-mode-mobile td {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 7px 0;
+    border: 0;
+    overflow-wrap: anywhere;
+}
+
+body.view-mode-mobile td::before {
+    content: attr(data-label);
+    flex: 0 0 34%;
+    color: #93c5fd;
+    font-weight: 600;
+}
+
+body.view-mode-mobile td:last-child {
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    border-top: 1px solid #1e293b;
+    margin-top: 6px;
+}
+
+body.view-mode-mobile .cto-section {
+    padding: 15px;
+}
+
+body.view-mode-mobile .modal-content {
+    width: 100%;
+    max-height: calc(100dvh - 20px);
+    margin: 0 auto;
+    padding: 18px;
+}
+
+body.view-mode-mobile .modal-header-handle {
+    margin: -18px -18px 18px;
+}
+
+body.view-mode-mobile .dashboard-cards {
+    grid-template-columns: 1fr;
+}
+
+body.view-mode-mobile .mapa-container {
+    height: 350px;
+}
+
+@media (max-width: 900px) {
     body:not(.view-mode-desktop) {
-        padding: 10px;
-    }
-
-    body:not(.view-mode-desktop) h1 {
-        font-size: 1.8em;
+        padding: 12px;
     }
 
     body:not(.view-mode-desktop) .top-bar {
@@ -521,6 +765,7 @@ body.view-mode-mobile,
 
     body:not(.view-mode-desktop) .device-switcher {
         justify-content: center;
+        flex-wrap: wrap;
     }
 
     body:not(.view-mode-desktop) .nav-tabs {
@@ -528,26 +773,10 @@ body.view-mode-mobile,
     }
 
     body:not(.view-mode-desktop) .nav-tab {
-        flex: 1 1 auto;
-        text-align: center;
+        flex: 1 1 120px;
         padding: 10px 12px;
-        font-size: 0.9em;
     }
 
-    body:not(.view-mode-desktop) #btnNovaCTO {
-        width: 100%;
-        padding: 14px;
-        font-size: 1em;
-    }
-
-    body:not(.view-mode-desktop) .modal-content {
-        width: 98%;
-        padding: 15px;
-        margin: 10px auto;
-        max-height: 94vh;
-    }
-
-    /* Transformação da tabela em CARDS para visualização em Celular */
     body:not(.view-mode-desktop) table,
     body:not(.view-mode-desktop) thead,
     body:not(.view-mode-desktop) tbody,
@@ -558,38 +787,37 @@ body.view-mode-mobile,
     }
 
     body:not(.view-mode-desktop) table thead {
-        display: none; /* Oculta cabeçalho no celular */
+        display: none;
     }
 
     body:not(.view-mode-desktop) tbody tr {
-        background: #0f172a;
-        border: 1px solid #334155;
-        border-radius: 8px;
         margin-bottom: 12px;
         padding: 12px;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        border: 1px solid #334155;
+        border-radius: 8px;
+        background: #0f172a;
     }
 
     body:not(.view-mode-desktop) td {
-        border: none;
-        position: relative;
-        padding: 6px 0;
         display: flex;
         justify-content: space-between;
-        align-items: center;
-        font-size: 0.95em;
+        align-items: flex-start;
+        gap: 12px;
+        padding: 7px 0;
+        border: 0;
+        overflow-wrap: anywhere;
     }
 
     body:not(.view-mode-desktop) td::before {
         content: attr(data-label);
-        font-weight: 600;
+        flex: 0 0 34%;
         color: #93c5fd;
-        margin-right: 15px;
+        font-weight: 600;
     }
 
     body:not(.view-mode-desktop) td:last-child {
-        justify-content: flex-end;
-        padding-top: 10px;
+        justify-content: flex-start;
+        flex-wrap: wrap;
         border-top: 1px solid #1e293b;
         margin-top: 6px;
     }
@@ -598,8 +826,41 @@ body.view-mode-mobile,
         padding: 15px;
     }
 
-    body:not(.view-mode-desktop) .mapa-container {
-        height: 350px;
+    body:not(.view-mode-desktop) .modal-content {
+        width: 100%;
+        max-height: calc(100dvh - 20px);
+        margin: 0 auto;
+    }
+
+    body:not(.view-mode-desktop) .dashboard-cards {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+@media (max-width: 520px) {
+    body:not(.view-mode-desktop) .dashboard-cards {
+        grid-template-columns: 1fr;
+    }
+
+    body:not(.view-mode-desktop) .device-switcher {
+        align-items: stretch;
+    }
+
+    body:not(.view-mode-desktop) .device-btn {
+        flex: 1 1 auto;
+        padding: 8px;
+    }
+
+    body:not(.view-mode-desktop) .modal-buttons {
+        flex-direction: column;
+    }
+
+    body:not(.view-mode-desktop) .modal-buttons button {
+        width: 100%;
+    }
+
+    body:not(.view-mode-desktop) .cto-header > div {
+        width: 100%;
     }
 }
 

@@ -2,12 +2,8 @@ from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from datetime import datetime
-import json
-import os
 from db import (
     init_db,
-    is_postgres_connected,
     test_connection,
     db_get_all_ctos,
     db_add_cto,
@@ -15,7 +11,12 @@ from db import (
     db_delete_cto,
     db_add_porta,
     db_update_porta,
-    db_delete_porta
+    db_delete_porta,
+    db_get_all_clientes,
+    db_add_cliente,
+    db_update_cliente,
+    db_desvincular_cliente,
+    db_transferir_cliente
 )
 
 app = FastAPI(title="Monitoramento CTO")
@@ -79,6 +80,15 @@ async def nova_cto(request: Request):
         sinal=sinal
     )
 
+    if not nova_cto_obj:
+        return JSONResponse(
+            status_code=400,
+            content={
+                "status": "error",
+                "message": "Um ou mais clientes já estão vinculados a outra CTO ou não foram encontrados."
+            }
+        )
+
     return {
         "message": "Nova CTO criada com sucesso!",
         "status": "success",
@@ -95,6 +105,7 @@ async def adicionar_porta(request: Request):
         "numero": data.get("numero"),
         "status": data.get("status"),
         "cliente": data.get("cliente", "-"),
+        "cliente_id": data.get("cliente_id"),
         "plano": data.get("plano", "-"),
         "sinal": data.get("sinal", ""),
         "observacao": data.get("observacao", "-")
@@ -176,6 +187,7 @@ async def editar_porta(request: Request):
         "numero": data.get("numero"),
         "status": data.get("status"),
         "cliente": data.get("cliente"),
+        "cliente_id": data.get("cliente_id"),
         "plano": data.get("plano"),
         "sinal": data.get("sinal"),
         "observacao": data.get("observacao")
@@ -214,3 +226,60 @@ async def excluir_porta(request: Request):
         "status": "success",
         "message": "Porta excluída com sucesso!"
     }
+
+
+@app.get("/listar-clientes")
+async def listar_clientes():
+    return {"clientes": db_get_all_clientes()}
+
+
+@app.post("/novo-cliente")
+async def novo_cliente(request: Request):
+    data = await request.json()
+    success, message, cliente = db_add_cliente(
+        nome=data.get("nome", ""),
+        plano=data.get("plano", "-"),
+        pppoe=data.get("pppoe", ""),
+        ppue=data.get("ppue", "")
+    )
+    if not success:
+        return JSONResponse(status_code=400, content={"status": "error", "message": message})
+    return {"status": "success", "message": message, "cliente": cliente}
+
+
+@app.post("/editar-cliente")
+async def editar_cliente(request: Request):
+    data = await request.json()
+    success, message = db_update_cliente(
+        cliente_id=data.get("cliente_id"),
+        nome=data.get("nome", ""),
+        plano=data.get("plano", "-"),
+        pppoe=data.get("pppoe", ""),
+        ppue=data.get("ppue", "")
+    )
+    if not success:
+        return JSONResponse(status_code=400, content={"status": "error", "message": message})
+    return {"status": "success", "message": message}
+
+
+@app.post("/desvincular-cliente")
+async def desvincular_cliente(request: Request):
+    data = await request.json()
+    success, message = db_desvincular_cliente(data.get("cliente_id"))
+    if not success:
+        return JSONResponse(status_code=400, content={"status": "error", "message": message})
+    return {"status": "success", "message": message}
+
+
+@app.post("/transferir-cliente")
+async def transferir_cliente(request: Request):
+    data = await request.json()
+    success, message = db_transferir_cliente(
+        cliente_id=data.get("cliente_id"),
+        cto_origem_id=data.get("cto_origem_id"),
+        cto_destino_id=data.get("cto_destino_id"),
+        numero_destino=data.get("numero_destino")
+    )
+    if not success:
+        return JSONResponse(status_code=400, content={"status": "error", "message": message})
+    return {"status": "success", "message": message}
