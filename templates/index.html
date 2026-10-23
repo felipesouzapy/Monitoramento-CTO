@@ -200,13 +200,9 @@
             </div>
             <div class="form-group">
                 <label for="inputPPPoE">PPPoE:</label>
-                <input type="text" id="inputPPPoE" autocomplete="off">
-            </div>
-            <div class="form-group">
-                <label for="inputPPUE">PPUE:</label>
                 <div class="copy-field">
-                    <input type="text" id="inputPPUE" autocomplete="off">
-                    <button type="button" id="btnCopiarPPUE" class="btn-secondary copy-button">Copiar</button>
+                    <input type="text" id="inputPPPoE" autocomplete="off">
+                    <button type="button" id="btnCopiarPPPoE" class="btn-secondary copy-button">Copiar</button>
                 </div>
             </div>
             <div class="modal-buttons">
@@ -606,7 +602,7 @@
         });
         document.getElementById("btnNovoCliente").onclick = () => abrirModalCliente();
         document.getElementById("btnSalvarCliente").onclick = salvarCliente;
-        document.getElementById("btnCopiarPPUE").onclick = () => copiarPPUE(document.getElementById("inputPPUE").value);
+        document.getElementById("btnCopiarPPPoE").onclick = () => copiarPPPoE(document.getElementById("inputPPPoE").value);
         document.getElementById("btnConfirmarTransferencia").onclick = confirmarTransferencia;
         document.getElementById("ctoDestinoTransferencia").onchange = atualizarPortasDestino;
         inputClienteModal.addEventListener("input", atualizarSugestoesClientes);
@@ -620,8 +616,7 @@
             document.getElementById("modalClienteTitulo").textContent = cliente ? "Editar cliente" : "Cadastrar cliente";
             document.getElementById("inputNomeCliente").value = cliente?.nome || "";
             document.getElementById("inputPlanoCliente").value = cliente?.plano || "";
-            document.getElementById("inputPPPoE").value = cliente?.pppoe || "";
-            document.getElementById("inputPPUE").value = cliente?.ppue || "";
+            document.getElementById("inputPPPoE").value = cliente?.ppue || "";
             modalCliente.style.display = "block";
         }
 
@@ -630,8 +625,7 @@
             const body = {
                 nome: document.getElementById("inputNomeCliente").value.trim(),
                 plano: document.getElementById("inputPlanoCliente").value.trim() || "-",
-                pppoe: document.getElementById("inputPPPoE").value.trim(),
-                ppue: document.getElementById("inputPPUE").value.trim()
+                ppue: document.getElementById("inputPPPoE").value.trim()
             };
             if (!body.nome) {
                 alert("Informe o nome do cliente.");
@@ -655,14 +649,14 @@
             }
         }
 
-        async function copiarPPUE(valor) {
+        async function copiarPPPoE(valor) {
             if (!valor) {
-                alert("Não há PPUE para copiar.");
+                alert("Não há PPPoE para copiar.");
                 return;
             }
             try {
                 await navigator.clipboard.writeText(valor);
-                alert("PPUE copiado para a área de transferência.");
+                alert("PPPoE copiado para a área de transferência.");
             } catch (error) {
                 const temporario = document.createElement("textarea");
                 temporario.value = valor;
@@ -671,9 +665,9 @@
                 const copiado = document.execCommand("copy");
                 temporario.remove();
                 if (copiado) {
-                    alert("PPUE copiado para a área de transferência.");
+                    alert("PPPoE copiado para a área de transferência.");
                 } else {
-                    alert("Não foi possível copiar o PPUE.");
+                    alert("Não foi possível copiar o PPPoE.");
                 }
             }
         }
@@ -1072,6 +1066,8 @@
                                 <button onclick="abrirModalAdicionarPorta(${argumentoInline(cto.id)}, ${argumentoInline(cto.nome)}, ${argumentoInline(cto.localizacao)}, ${argumentoInline(cto.quantidade_portas)})" style="background: #22c55e; padding: 6px 12px; font-size: 0.85em;">➕ Add Porta</button>
                                 <button onclick="abrirModalEditarCTO(${argumentoInline(cto.id)}, ${argumentoInline(cto.localizacao)}, ${argumentoInline(cto.quantidade_portas)}, ${argumentoInline(cto.latitude)}, ${argumentoInline(cto.longitude)}, ${argumentoInline(cto.sinal || '')})" style="background: #f59e0b; padding: 6px 12px; font-size: 0.85em;">✏️ Editar CTO</button>
                                 <button onclick="excluirCTO(${argumentoInline(cto.id)})" style="background: #ef4444; padding: 6px 12px; font-size: 0.85em;">🗑️ Excluir</button>
+                                <button type="button" id="toggle-portas-${cto.id}"
+                                    onclick="alternarPortasCTO(${argumentoInline(cto.id)})" style="padding: 6px 12px; font-size: 0.85em;">Ver portas (${portasAtivasCount})</button>
                                 <button type="button" class="btn-secondary" id="toggle-clientes-${cto.id}"
                                     onclick="alternarClientesCTO(${argumentoInline(cto.id)})" style="padding: 6px 12px; font-size: 0.85em;">Ver clientes (${clientesCto.length})</button>
                             </div>
@@ -1090,7 +1086,7 @@
                                     <div>
                                         <strong>${escaparHtml(cliente.nome)}</strong>
                                         <span>Porta ${escaparHtml(cliente.porta_numero)}</span>
-                                        ${cliente.ppue ? `<span>PPUE: ${escaparHtml(cliente.ppue)}</span>` : ""}
+                                        ${cliente.ppue ? `<span>PPPoE: ${escaparHtml(cliente.ppue)}</span>` : ""}
                                     </div>
                                     <button type="button" onclick="abrirTransferencia(${argumentoInline(cliente.id)}, ${argumentoInline(cto.id)})">Transferir</button>
                                     <button type="button" class="btn-secondary" onclick="desvincularCliente(${argumentoInline(cliente.id)})">Remover da CTO</button>
@@ -1098,6 +1094,7 @@
                             `).join("") : '<p>Nenhum cliente vinculado a esta CTO.</p>'}
                         </div>
 
+                        <div id="portas-cto-${cto.id}" class="cto-ports" hidden>
                         <table>
                             <thead>
                                 <tr>
@@ -1144,6 +1141,7 @@
                                 `).join('')}
                             </tbody>
                         </table>
+                        </div>
                     </div>
                 `;
             }).join('');
@@ -1164,20 +1162,18 @@
                             <th>Cliente</th>
                             <th>Plano</th>
                             <th>PPPoE</th>
-                            <th>PPUE</th>
                             <th>Vínculo</th>
                             <th>Ações</th>
                         </tr>
                     </thead>
                     <tbody id="corpoTabelaClientes">
                         ${clientes.map(item => `
-                            <tr data-search="${escaparHtml(`${item.nome} ${item.plano} ${item.pppoe} ${item.ppue} ${item.cto_nome || ""}`)}">
+                            <tr data-search="${escaparHtml(`${item.nome} ${item.plano} ${item.ppue} ${item.cto_nome || ""}`)}">
                                 <td data-label="Cliente"><strong>${escaparHtml(item.nome)}</strong></td>
                                 <td data-label="Plano">${escaparHtml(item.plano || "-")}</td>
-                                <td data-label="PPPoE">${escaparHtml(item.pppoe || "-")}</td>
-                                <td data-label="PPUE">
+                                <td data-label="PPPoE">
                                     ${escaparHtml(item.ppue || "-")}
-                                    ${item.ppue ? `<button type="button" class="copy-ppue" data-ppue="${escaparHtml(item.ppue)}">Copiar</button>` : ""}
+                                    ${item.ppue ? `<button type="button" class="copy-pppoe" data-pppoe="${escaparHtml(item.ppue)}">Copiar</button>` : ""}
                                 </td>
                                 <td data-label="Vínculo">${item.cto_id
                                     ? `<a href="javascript:void(0)" onclick="focarCTO(${argumentoInline(item.cto_id)})">${escaparHtml(item.cto_nome)} — Porta ${escaparHtml(item.porta_numero)}</a>`
@@ -1191,8 +1187,8 @@
                     </tbody>
                 </table>
             `;
-            container.querySelectorAll(".copy-ppue").forEach(button => {
-                button.addEventListener("click", () => copiarPPUE(button.dataset.ppue));
+            container.querySelectorAll(".copy-pppoe").forEach(button => {
+                button.addEventListener("click", () => copiarPPPoE(button.dataset.pppoe));
             });
             filtrarClientes();
         }
@@ -1202,6 +1198,14 @@
             const botao = document.getElementById(`toggle-clientes-${ctoId}`);
             lista.hidden = !lista.hidden;
             botao.textContent = `${lista.hidden ? "Ver" : "Ocultar"} clientes (${clientesGlobais.filter(c => String(c.cto_id) === String(ctoId)).length})`;
+        }
+
+        function alternarPortasCTO(ctoId) {
+            const lista = document.getElementById(`portas-cto-${ctoId}`);
+            const botao = document.getElementById(`toggle-portas-${ctoId}`);
+            const totalPortas = ctosGlobais.find(cto => String(cto.id) === String(ctoId))?.portas.length || 0;
+            lista.hidden = !lista.hidden;
+            botao.textContent = `${lista.hidden ? "Ver" : "Ocultar"} portas (${totalPortas})`;
         }
 
         async function desvincularCliente(clienteId) {
